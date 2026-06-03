@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Chi phí du lịch nhóm</title>
+  <style>
+    :root{
+      --bg:#f6f7fb; --card:#ffffff; --text:#151923; --muted:#667085;
+      --primary:#6c5ce7; --primary2:#00b894; --danger:#ff4757;
+      --line:#e7e9f2; --shadow:0 14px 35px rgba(22,29,61,.08);
+      --radius:22px;
+    }
+    [data-theme="dark"]{
+      --bg:#10131a; --card:#171b24; --text:#f4f7fb; --muted:#a4adbd;
+      --line:#2a3040; --shadow:0 14px 35px rgba(0,0,0,.22);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1050px;margin:auto;padding:18px}
+    .top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px}
+    h1{font-size:26px;margin:0}
+    .sub{color:var(--muted);font-size:14px;margin-top:4px}
+    .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+    .stat .label{color:var(--muted);font-size:13px}
+    .stat .value{font-weight:800;font-size:22px;margin-top:8px}
+    .row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    input,select,button{width:100%;padding:13px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:15px}
+    button{border:none;background:var(--primary);color:white;font-weight:700;cursor:pointer}
+    button.secondary{background:#eef0ff;color:#4b43c6}
+    button.danger{background:var(--danger)}
+    button.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+    .members{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
+    .check{border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;gap:8px;align-items:center}
+    .check input{width:auto}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:11px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;vertical-align:top}
+    th{color:var(--muted);font-weight:700}
+    .money{font-weight:700;white-space:nowrap}
+    .plus{color:var(--primary2);font-weight:800}
+    .minus{color:var(--danger);font-weight:800}
+    .list{display:grid;gap:8px}
+    .pay{background:rgba(108,92,231,.09);border:1px solid var(--line);border-radius:16px;padding:12px;font-weight:700}
+    .small{font-size:12px;color:var(--muted)}
+    .hide{display:none}
+    .toolbar{display:flex;gap:8px;align-items:center}
+    .pill{display:inline-block;background:rgba(108,92,231,.1);color:var(--primary);padding:6px 10px;border-radius:999px;font-size:12px;font-weight:700;margin:2px}
+    @media(max-width:800px){
+      .grid,.row{grid-template-columns:1fr 1fr}
+      .members{grid-template-columns:1fr 1fr}
+      table{display:block;overflow:auto}
+    }
+    @media(max-width:520px){
+      .grid,.row{grid-template-columns:1fr}
+      .top{align-items:flex-start;flex-direction:column}
+      h1{font-size:23px}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>🏝️ Chia tiền du lịch</h1>
+      <div class="sub">Ý · Ngân · Khanh · Bảo — dữ liệu đồng bộ bằng Firebase</div>
+    </div>
+    <div class="toolbar">
+      <button class="ghost" id="themeBtn" style="min-width:105px">🌙 Dark</button>
+      <button class="secondary" id="exportBtn" style="min-width:110px">Xuất CSV</button>
+    </div>
+  </div>
+
+  <div class="card" id="loginCard">
+    <h3>Chọn tên của bạn</h3>
+    <div class="row" style="grid-template-columns:1fr 170px">
+      <select id="currentUser">
+        <option value="">-- Chọn tên --</option>
+        <option>Ý</option>
+        <option>Ngân</option>
+        <option>Khanh</option>
+        <option>Bảo</option>
+      </select>
+      <button id="saveUserBtn">Vào dùng</button>
+    </div>
+    <p class="small">Mỗi người chỉ sửa/xóa khoản chi do chính tên mình tạo trên giao diện này.</p>
+  </div>
+
+  <div id="app" class="hide">
+    <div class="grid">
+      <div class="card stat"><div class="label">Tổng chi</div><div class="value" id="totalExpense">0đ</div></div>
+      <div class="card stat"><div class="label">Số người</div><div class="value">4</div></div>
+      <div class="card stat"><div class="label">Số khoản chi</div><div class="value" id="expenseCount">0</div></div>
+      <div class="card stat"><div class="label">Bạn đang dùng</div><div class="value" id="userLabel">-</div></div>
+    </div>
+
+    <div class="card">
+      <h3>➕ Thêm khoản chi</h3>
+      <div class="row">
+        <input id="date" type="date">
+        <select id="payer">
+          <option>Ý</option><option>Ngân</option><option>Khanh</option><option>Bảo</option>
+        </select>
+        <input id="content" placeholder="Nội dung: khách sạn, ăn uống...">
+        <input id="amount" type="number" min="0" placeholder="Số tiền">
+      </div>
+      <div class="small" style="margin-top:12px">Chọn người tham gia khoản chi này:</div>
+      <div class="members">
+        <label class="check"><input type="checkbox" class="participant" value="Ý" checked> Ý</label>
+        <label class="check"><input type="checkbox" class="participant" value="Ngân" checked> Ngân</label>
+        <label class="check"><input type="checkbox" class="participant" value="Khanh" checked> Khanh</label>
+        <label class="check"><input type="checkbox" class="participant" value="Bảo" checked> Bảo</label>
+      </div>
+      <button id="addBtn" style="margin-top:12px">Lưu khoản chi</button>
+    </div>
+
+    <div class="card">
+      <h3>📊 Tổng hợp</h3>
+      <table>
+        <thead><tr><th>Người</th><th>Đã chi</th><th>Phải chịu</th><th>Thừa / Thiếu</th></tr></thead>
+        <tbody id="summaryBody"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h3>💸 Ai trả ai?</h3>
+      <div id="settlements" class="list"></div>
+    </div>
+
+    <div class="card">
+      <h3>🧾 Danh sách khoản chi</h3>
+      <table>
+        <thead><tr><th>Ngày</th><th>Người chi</th><th>Nội dung</th><th>Số tiền</th><th>Người tham gia</th><th></th></tr></thead>
+        <tbody id="expenseBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+  import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCMNisWjfX5dd16JSrlV-wPXb0Q-PGBjwI",
+    authDomain: "chiphidulich-b7abf.firebaseapp.com",
+    projectId: "chiphidulich-b7abf",
+    storageBucket: "chiphidulich-b7abf.firebasestorage.app",
+    messagingSenderId: "35852463617",
+    appId: "1:35852463617:web:87a40e1fd9933185c9da00",
+    measurementId: "G-H3JSQ3YZHF"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const members = ["Ý","Ngân","Khanh","Bảo"];
+  const tripId = "chuyen-di-4-nguoi";
+  const expensesRef = collection(db, "trips", tripId, "expenses");
+
+  const fmt = n => Math.round(n || 0).toLocaleString("vi-VN") + "đ";
+  const $ = id => document.getElementById(id);
+  let expenses = [];
+  let me = localStorage.getItem("travelUser") || "";
+
+  function initUser(){
+    if(me){
+      $("currentUser").value = me;
+      $("payer").value = me;
+      $("userLabel").textContent = me;
+      $("loginCard").classList.add("hide");
+      $("app").classList.remove("hide");
+    }
+  }
+
+  $("saveUserBtn").onclick = () => {
+    me = $("currentUser").value;
+    if(!me) return alert("Bạn chọn tên trước nha.");
+    localStorage.setItem("travelUser", me);
+    $("payer").value = me;
+    initUser();
+  };
+
+  $("themeBtn").onclick = () => {
+    const dark = document.documentElement.getAttribute("data-theme") === "dark";
+    document.documentElement.setAttribute("data-theme", dark ? "light" : "dark");
+    $("themeBtn").textContent = dark ? "🌙 Dark" : "☀️ Light";
+  };
+
+  $("date").valueAsDate = new Date();
+
+  $("addBtn").onclick = async () => {
+    const date = $("date").value;
+    const payer = $("payer").value;
+    const content = $("content").value.trim();
+    const amount = Number($("amount").value);
+    const participants = [...document.querySelectorAll(".participant:checked")].map(x => x.value);
+
+    if(!me) return alert("Bạn cần chọn tên trước.");
+    if(payer !== me) return alert("Bạn chỉ được thêm khoản chi dưới tên của mình.");
+    if(!date || !content || !amount) return alert("Bạn nhập đủ ngày, nội dung và số tiền nha.");
+    if(participants.length === 0) return alert("Chọn ít nhất 1 người tham gia khoản chi.");
+
+    await addDoc(expensesRef, {
+      date, payer, content, amount, participants,
+      createdBy: me,
+      createdAt: serverTimestamp()
+    });
+
+    $("content").value = "";
+    $("amount").value = "";
+    document.querySelectorAll(".participant").forEach(x => x.checked = true);
+  };
+
+  function calc(){
+    const paid = Object.fromEntries(members.map(m => [m,0]));
+    const owed = Object.fromEntries(members.map(m => [m,0]));
+
+    for(const e of expenses){
+      paid[e.payer] += Number(e.amount || 0);
+      const ps = e.participants || [];
+      const share = ps.length ? Number(e.amount || 0) / ps.length : 0;
+      ps.forEach(p => owed[p] += share);
+    }
+
+    const balance = Object.fromEntries(members.map(m => [m, paid[m] - owed[m]]));
+    return {paid, owed, balance};
+  }
+
+  function makeSettlements(balance){
+    const debtors = [];
+    const creditors = [];
+    members.forEach(m => {
+      const v = Math.round(balance[m]);
+      if(v < 0) debtors.push({name:m, amount:-v});
+      if(v > 0) creditors.push({name:m, amount:v});
+    });
+
+    const result = [];
+    let i=0, j=0;
+    while(i < debtors.length && j < creditors.length){
+      const pay = Math.min(debtors[i].amount, creditors[j].amount);
+      if(pay > 0) result.push({from: debtors[i].name, to: creditors[j].name, amount: pay});
+      debtors[i].amount -= pay;
+      creditors[j].amount -= pay;
+      if(debtors[i].amount <= 0) i++;
+      if(creditors[j].amount <= 0) j++;
+    }
+    return result;
+  }
+
+  function render(){
+    const total = expenses.reduce((s,e) => s + Number(e.amount || 0), 0);
+    $("totalExpense").textContent = fmt(total);
+    $("expenseCount").textContent = expenses.length;
+
+    const {paid, owed, balance} = calc();
+    $("summaryBody").innerHTML = members.map(m => `
+      <tr>
+        <td><b>${m}</b></td>
+        <td class="money">${fmt(paid[m])}</td>
+        <td class="money">${fmt(owed[m])}</td>
+        <td class="${balance[m] >= 0 ? "plus" : "minus"}">${balance[m] >= 0 ? "+" : ""}${fmt(balance[m])}</td>
+      </tr>
+    `).join("");
+
+    const st = makeSettlements(balance);
+    $("settlements").innerHTML = st.length ? st.map(x => `
+      <div class="pay">${x.from} ➜ ${x.to}: ${fmt(x.amount)}</div>
+    `).join("") : `<div class="small">Chưa có khoản cần quyết toán.</div>`;
+
+    $("expenseBody").innerHTML = expenses.map(e => `
+      <tr>
+        <td>${e.date || ""}</td>
+        <td><b>${e.payer || ""}</b></td>
+        <td>${escapeHtml(e.content || "")}</td>
+        <td class="money">${fmt(e.amount)}</td>
+        <td>${(e.participants || []).map(p => `<span class="pill">${p}</span>`).join("")}</td>
+        <td>${e.createdBy === me ? `<button class="danger" data-del="${e.id}">Xóa</button>` : `<span class="small">Không phải khoản của bạn</span>`}</td>
+      </tr>
+    `).join("");
+
+    document.querySelectorAll("[data-del]").forEach(btn => {
+      btn.onclick = async () => {
+        if(confirm("Xóa khoản chi này?")) await deleteDoc(doc(db, "trips", tripId, "expenses", btn.dataset.del));
+      };
+    });
+  }
+
+  function escapeHtml(str){
+    return str.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  }
+
+  $("exportBtn").onclick = () => {
+    const rows = [["Ngày","Người chi","Nội dung","Số tiền","Người tham gia"]];
+    expenses.forEach(e => rows.push([e.date,e.payer,e.content,e.amount,(e.participants||[]).join(" | ")]));
+    const csv = rows.map(r => r.map(v => `"${String(v ?? "").replaceAll('"','""')}"`).join(",")).join("\\n");
+    const blob = new Blob(["\\ufeff" + csv], {type:"text/csv;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "chi-phi-du-lich.csv";
+    a.click();
+  };
+
+  onSnapshot(query(expensesRef, orderBy("date","desc")), snap => {
+    expenses = snap.docs.map(d => ({id:d.id, ...d.data()}));
+    render();
+  }, err => {
+    alert("Không đọc được dữ liệu Firestore. Kiểm tra lại Rules hoặc Internet. " + err.message);
+  });
+
+  initUser();
+</script>
+</body>
+</html>
