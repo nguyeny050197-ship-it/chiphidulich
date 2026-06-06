@@ -107,6 +107,8 @@
     .categoryName { font-weight: 900 }
     .bar { height: 9px; background: rgba(18, 48, 71, .08); border-radius: 999px; overflow: hidden; margin-top: 8px }
     .bar span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(135deg, #ff8a3d, #28b8d5) }
+    .btn-group { display: flex; gap: 4px; }
+    .btn-group button { padding: 6px 10px; border-radius: 10px; font-size: 12px; width: auto; }
 
     @media(max-width:960px) {
       .grid, .row, .row3, .grid2 { grid-template-columns: 1fr 1fr }
@@ -154,7 +156,7 @@
       </select>
       <button id="saveUserBtn">Vào dùng</button>
     </div>
-    <p class="small">Không cần mật khẩu. Chỉ Ý được nhập/xóa phần góp Quỹ. Mỗi người chỉ xóa khoản chi do chính mình nhập.</p>
+    <p class="small">Không cần mật khẩu. Chỉ Ý được nhập/xóa phần góp Quỹ. Mỗi người chỉ sửa/xóa khoản chi do chính mình nhập hoặc Quỹ chung (đối với Ý).</p>
   </div>
 
   <div id="app" class="hide">
@@ -206,7 +208,7 @@
 
     <section id="expense" class="page hide">
       <div class="card">
-        <h3>➕ Nhập khoản chi</h3>
+        <h3 id="formTitle">➕ Nhập khoản chi</h3>
         <div class="row">
           <input id="date" type="date">
           <select id="payer">
@@ -216,7 +218,15 @@
             <option>Bảo</option>
             <option>Quỹ chung</option>
           </select>
-          <input id="content" placeholder="Nội dung chi">
+          <select id="content">
+            <option value="">-- Nội dung chi --</option>
+            <option>Ăn uống</option>
+            <option>Khách sạn</option>
+            <option>Di chuyển</option>
+            <option>Vé tham quan</option>
+            <option>Mua sắm</option>
+            <option>Khác</option>
+          </select>
           <input id="amount" type="number" min="0" placeholder="Số tiền">
         </div>
         <div class="row3" style="margin-top:10px">
@@ -248,6 +258,7 @@
           <label class="check"><input type="checkbox" class="participant" value="Bảo" checked> Bảo</label>
         </div>
         <button id="addExpenseBtn" style="margin-top:12px">Lưu khoản chi</button>
+        <button id="cancelEditBtn" class="ghost hide" style="margin-top:8px">Hủy cập nhật</button>
         <div class="small" style="margin-top:8px">Bill: up ảnh lên Google Drive/Google Photos/Zalo rồi dán link vào.</div>
       </div>
     </section>
@@ -307,7 +318,7 @@
               <th>Số tiền</th>
               <th>Người tham gia</th>
               <th>Bill</th>
-              <th></th>
+              <th>Hành động</th>
             </tr>
           </thead>
           <tbody id="expenseBody"></tbody>
@@ -319,9 +330,8 @@
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-  import { getFirestore, collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+  import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-  // Cấu hình Firebase giữ nguyên của bạn
   const firebaseConfig = {
     apiKey: "AIzaSyCMNisWjfX5dd16JSrlV-wPXb0Q-PGBjwI",
     authDomain: "chiphidulich-b7abf.firebaseapp.com",
@@ -340,7 +350,6 @@
   const expensesRef = collection(db, "trips", tripId, "expenses");
   const fundsRef = collection(db, "trips", tripId, "funds");
 
-  // Các hàm tiện ích (Helper functions)
   const $ = id => document.getElementById(id);
   const fmt = n => Math.round(n || 0).toLocaleString("vi-VN") + "đ";
   const esc = s => String(s || "").replace(/[&<>"']/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[m]));
@@ -348,15 +357,14 @@
   let expenses = [];
   let funds = [];
   let me = localStorage.getItem("travelUser") || "";
+  let editingExpenseId = null; // Biến tạm lưu ID khoản chi đang sửa
 
-  // Tạo Avatar chữ đại diện cho từng người
   function avatar(name) {
     if (name === "Quỹ chung") return "💰 ";
     const cls = name === "Ý" ? "y" : name === "Ngân" ? "n" : name === "Khanh" ? "k" : "b";
     return `<span class="avatar ${cls}">${name[0]}</span>`;
   }
 
-  // Khởi tạo thông tin User khi load trang
   function initUser() {
     if (me) {
       $("currentUser").value = me;
@@ -367,7 +375,6 @@
     }
   }
 
-  // Sự kiện nút đăng nhập nhanh bằng Tên
   $("saveUserBtn").onclick = () => {
     me = $("currentUser").value;
     if (!me) return alert("Bạn chọn tên trước nha.");
@@ -376,35 +383,39 @@
     render();
   };
 
-  // Nút đổi giao diện Sáng / Tối (Theme Mode)
   $("themeBtn").onclick = () => {
     const isDark = document.documentElement.getAttribute("data-theme") === "dark";
     document.documentElement.setAttribute("data-theme", isDark ? "light" : "dark");
     $("themeBtn").textContent = isDark ? "🌙 Dark" : "☀️ Light";
   };
 
-  // Logic chuyển Tab điều hướng
+  function switchTab(tabName) {
+    document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
+    document.querySelectorAll(".page").forEach(p => p.classList.add("hide"));
+    const activeTabBtn = document.querySelector(`.tab[data-tab="${tabName}"]`);
+    if(activeTabBtn) activeTabBtn.classList.add("active");
+    $(tabName).classList.remove("hide");
+  }
+
   document.querySelectorAll(".tab").forEach(btn => {
-    btn.onclick = () => {
-      document.querySelectorAll(".tab").forEach(b => b.classList.remove("active"));
-      document.querySelectorAll(".page").forEach(p => p.classList.add("hide"));
-      btn.classList.add("active");
-      $(btn.dataset.tab).classList.remove("hide");
-    };
+    btn.onclick = () => switchTab(btn.dataset.tab);
   });
 
-  // Lấy ngày hiện tại định dạng YYYY-MM-DD
   function todayString() {
-    const d = new Date(),
-          yyyy = d.getFullYear(),
-          mm = String(d.getMonth() + 1).padStart(2, "0"),
-          dd = String(d.getDate()).padStart(2, "0");
+    const d = new Date(), yyyy = d.getFullYear(), mm = String(d.getMonth() + 1).padStart(2, "0"), dd = String(d.getDate()).padStart(2, "0");
     return `${yyyy}-${mm}-${dd}`;
   }
   $("date").value = todayString();
   $("fundDate").value = todayString();
 
-  // Thêm mới một khoản chi tiêu
+  // Đồng bộ ô chọn danh mục tự động nhảy theo nội dung chi được chọn
+  $("content").onchange = () => {
+    if ($("content").value) {
+      $("category").value = $("content").value;
+    }
+  };
+
+  // Nút Lưu / Cập nhật khoản chi
   $("addExpenseBtn").onclick = async () => {
     const date = $("date").value,
           payer = $("payer").value,
@@ -421,21 +432,46 @@
     if (!date || !content || !amount) return alert("Bạn nhập đủ ngày, nội dung và số tiền nha.");
     if (participants.length === 0) return alert("Chọn ít nhất 1 người tham gia khoản chi.");
 
-    await addDoc(expensesRef, {
+    const data = {
       date, payer, content, amount, category, paymentMethod, billLink, note, participants,
-      createdBy: me,
-      createdAt: serverTimestamp()
-    });
+      updatedBy: me,
+      updatedAt: serverTimestamp()
+    };
 
-    // Reset Form nhập
+    if (editingExpenseId) {
+      // Chế độ Cập nhật dữ liệu cũ
+      await updateDoc(doc(db, "trips", tripId, "expenses", editingExpenseId), data);
+      resetExpenseForm();
+      alert("Đã cập nhật khoản chi thành công!");
+      switchTab("history");
+    } else {
+      // Chế độ Thêm mới hoàn toàn
+      data.createdBy = me;
+      data.createdAt = serverTimestamp();
+      await addDoc(expensesRef, data);
+      resetExpenseForm();
+    }
+  };
+
+  function resetExpenseForm() {
+    editingExpenseId = null;
+    $("formTitle").textContent = "➕ Nhập khoản chi";
+    $("addExpenseBtn").textContent = "Lưu khoản chi";
+    $("cancelEditBtn").classList.add("hide");
     $("content").value = "";
     $("amount").value = "";
     $("billLink").value = "";
     $("note").value = "";
+    $("payer").value = me;
+    $("date").value = todayString();
     document.querySelectorAll(".participant").forEach(x => x.checked = true);
+  }
+
+  $("cancelEditBtn").onclick = () => {
+    resetExpenseForm();
+    switchTab("history");
   };
 
-  // Thêm mới một khoản góp quỹ (Chỉ dành cho Ý)
   $("addFundBtn").onclick = async () => {
     if (me !== "Ý") return alert("Chỉ Ý được nhập phần góp Quỹ.");
     const date = $("fundDate").value,
@@ -446,16 +482,13 @@
     if (!date || !person || !amount) return alert("Nhập đủ ngày, người góp và số tiền.");
 
     await addDoc(fundsRef, {
-      date, person, amount, note,
-      createdBy: me,
-      createdAt: serverTimestamp()
+      date, person, amount, note, createdBy: me, createdAt: serverTimestamp()
     });
 
     $("fundAmount").value = "";
     $("fundNote").value = "";
   };
 
-  // Hàm tính toán logic chi phí, quỹ và số tiền chênh lệch
   function calc() {
     const paidPersonal = Object.fromEntries(members.map(m => [m, 0])),
           fundContrib = Object.fromEntries(members.map(m => [m, 0])),
@@ -481,8 +514,7 @@
       const cat = categories.includes(e.category) ? e.category : "Khác";
       byCategory[cat] += amount;
 
-      const ps = e.participants || [],
-            share = ps.length ? amount / ps.length : 0;
+      const ps = e.participants || [], share = ps.length ? amount / ps.length : 0;
       ps.forEach(p => {
         if (owed[p] !== undefined) owed[p] += share;
       });
@@ -492,7 +524,6 @@
     return { paidPersonal, fundContrib, owed, balance, totalExpense, fundSpent, totalFundIn, fundBalance: totalFundIn - fundSpent, byCategory };
   }
 
-  // Thuật toán tối ưu hóa quyết toán "Ai trả tiền ai"
   function makeSettlements(balance) {
     const debtors = [], creditors = [];
     members.forEach(m => {
@@ -514,18 +545,15 @@
     return rs;
   }
 
-  // Kiểm tra điều kiện có được quyền xóa dòng chi tiêu không
-  function canDeleteExpense(e) {
+  // Yêu cầu 1: Quyền sửa/xóa khoản chi (Ý được quyền sửa/xóa của Ý và Quỹ chung)
+  function canEditOrDeleteExpense(e) {
     return e.createdBy === me || (e.payer === "Quỹ chung" && me === "Ý");
   }
 
-  // Tự vẽ biểu đồ hình tròn (Pie Chart) bằng HTML5 Canvas thuần
   function renderChart(byCategory) {
     const canvas = $("categoryChart");
     if (!canvas) return;
-    const ctx = canvas.getContext("2d"),
-          dpr = window.devicePixelRatio || 1,
-          rect = canvas.getBoundingClientRect();
+    const ctx = canvas.getContext("2d"), dpr = window.devicePixelRatio || 1, rect = canvas.getBoundingClientRect();
 
     canvas.width = rect.width * dpr;
     canvas.height = 260 * dpr;
@@ -534,9 +562,7 @@
 
     const values = categories.map(c => byCategory[c] || 0),
           total = values.reduce((a, b) => a + b, 0),
-          cx = rect.width / 2,
-          cy = 130,
-          radius = Math.min(rect.width, 260) * .34,
+          cx = rect.width / 2, cy = 130, radius = Math.min(rect.width, 260) * .34,
           colors = ["#ff8a3d", "#28b8d5", "#18c29c", "#ffcf5a", "#7c5cff", "#ff5a6b"];
 
     if (total === 0) {
@@ -551,26 +577,16 @@
     values.forEach((v, i) => {
       if (v <= 0) return;
       const angle = (v / total) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(cx, cy);
-      ctx.arc(cx, cy, radius, start, start + angle);
-      ctx.closePath();
-      ctx.fillStyle = colors[i];
-      ctx.fill();
-      start += angle;
+      ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, radius, start, start + angle); ctx.closePath();
+      ctx.fillStyle = colors[i]; ctx.fill(); start += angle;
     });
 
-    ctx.beginPath();
-    ctx.arc(cx, cy, radius * .55, 0, Math.PI * 2);
-    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--card") || "#fff";
-    ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, cy, radius * .55, 0, Math.PI * 2);
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--card") || "#fff"; ctx.fill();
     ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--text") || "#123047";
-    ctx.font = "900 16px Be Vietnam Pro";
-    ctx.textAlign = "center";
-    ctx.fillText(fmt(total), cx, cy + 5);
+    ctx.font = "900 16px Be Vietnam Pro"; ctx.textAlign = "center"; ctx.fillText(fmt(total), cx, cy + 5);
   }
 
-  // Hàm Render giao diện chính đẩy dữ liệu ra màn hình HTML
   function render() {
     const c = calc();
     $("totalExpense").textContent = fmt(c.totalExpense);
@@ -578,7 +594,6 @@
     $("fundSpent").textContent = fmt(c.fundSpent);
     $("fundBalance").textContent = fmt(c.fundBalance);
 
-    // Bảng tổng hợp thành viên
     $("summaryBody").innerHTML = members.map(m => `
       <tr>
         <td><b>${avatar(m)}${m}</b></td>
@@ -589,15 +604,12 @@
       </tr>
     `).join("");
 
-    // Top chi tiêu cá nhân
     const top = members.map(m => ({ name: m, amount: c.paidPersonal[m] })).sort((a, b) => b.amount - a.amount);
     $("topSpenders").innerHTML = top.map(x => `<div class="pay">${avatar(x.name)}${x.name}: ${fmt(x.amount)}</div>`).join("");
 
-    // Tiến trình chi theo danh mục
     const maxCat = Math.max(...categories.map(cat => c.byCategory[cat] || 0), 1);
     $("categoryList").innerHTML = categories.map(cat => {
-      const amount = c.byCategory[cat] || 0,
-            pct = Math.round((amount / maxCat) * 100);
+      const amount = c.byCategory[cat] || 0, pct = Math.round((amount / maxCat) * 100);
       return `
         <div class="categoryItem">
           <div class="categoryName">${cat}</div>
@@ -608,11 +620,10 @@
 
     renderChart(c.byCategory);
 
-    // Quyết toán ai trả ai
     const st = makeSettlements(c.balance);
     $("settlements").innerHTML = st.length ? st.map(x => `<div class="pay">${avatar(x.from)}${x.from} ➜ ${avatar(x.to)}${x.to}: ${fmt(x.amount)}</div>`).join("") : `<div class="small">Hiện chưa có khoản cần bù.</div>`;
 
-    // Lịch sử chi tiêu
+    // Tạo cột hành động chứa nút Sửa và Xóa ở phần Lịch sử
     $("expenseBody").innerHTML = expenses.map(e => `
       <tr>
         <td>${e.date || ""}</td>
@@ -623,11 +634,17 @@
         <td class="money">${fmt(e.amount)}</td>
         <td>${(e.participants || []).map(p => `<span class="pill">${p}</span>`).join("")}</td>
         <td>${e.billLink ? `<a class="bill" href="${esc(e.billLink)}" target="_blank">Xem bill</a>` : `<span class="small">Không có</span>`}</td>
-        <td>${canDeleteExpense(e) ? `<button class="danger" data-expense-del="${e.id}">Xóa</button>` : `<span class="small">Không được xóa</span>`}</td>
+        <td>
+          ${canEditOrDeleteExpense(e) ? `
+            <div class="btn-group">
+              <button class="soft" data-expense-edit="${e.id}">Sửa</button>
+              <button class="danger" data-expense-del="${e.id}">Xóa</button>
+            </div>
+          ` : `<span class="small">Không có quyền</span>`}
+        </td>
       </tr>
     `).join("");
 
-    // Bảng lịch sử góp Quỹ
     $("fundBody").innerHTML = funds.map(f => `
       <tr>
         <td>${f.date || ""}</td>
@@ -638,16 +655,47 @@
       </tr>
     `).join("");
 
-    // Sự kiện Click nút Xóa Khoản chi
+    // Xử lý Sự kiện nút Sửa khoản chi
+    document.querySelectorAll("[data-expense-edit]").forEach(btn => {
+      btn.onclick = () => {
+        const item = expenses.find(x => x.id === btn.dataset.expenseEdit);
+        if (!item) return;
+
+        editingExpenseId = item.id;
+        switchTab("expense"); // Chuyển hướng tab về ô nhập
+
+        // Đổ ngược dữ liệu vào Form
+        $("date").value = item.date || todayString();
+        $("payer").value = item.payer;
+        $("content").value = item.content;
+        $("amount").value = item.amount;
+        $("category").value = item.category || "Khác";
+        $("paymentMethod").value = item.paymentMethod || "Tiền mặt";
+        $("billLink").value = item.billLink || "";
+        $("note").value = item.note || "";
+
+        // Tích chọn lại người tham gia
+        const ps = item.participants || [];
+        document.querySelectorAll(".participant").forEach(chk => {
+          chk.checked = ps.includes(chk.value);
+        });
+
+        // Cập nhật Trạng thái Tiêu đề Form
+        $("formTitle").textContent = "✏️ Sửa khoản chi";
+        $("addExpenseBtn").textContent = "Cập nhật khoản chi";
+        $("cancelEditBtn").classList.remove("hide");
+      };
+    });
+
     document.querySelectorAll("[data-expense-del]").forEach(btn => {
       btn.onclick = async () => {
         if (confirm("Xóa khoản chi này?")) {
           await deleteDoc(doc(db, "trips", tripId, "expenses", btn.dataset.expenseDel));
+          if(editingExpenseId === btn.dataset.expenseDel) resetExpenseForm();
         }
       };
     });
 
-    // Sự kiện Click nút Xóa Góp quỹ
     document.querySelectorAll("[data-fund-del]").forEach(btn => {
       btn.onclick = async () => {
         if (me !== "Ý") return alert("Chỉ Ý được xóa góp Quỹ.");
@@ -657,11 +705,9 @@
       };
     });
 
-    // Lưu cache Offline vào LocalStorage đề phòng sự cố
     localStorage.setItem("travelExpensesCache", JSON.stringify({ expenses, funds, savedAt: new Date().toISOString() }));
   }
 
-  // Tính năng Xuất file báo cáo Excel/CSV
   $("exportBtn").onclick = () => {
     const rows = [["Loại", "Ngày", "Người/Nguồn", "Nội dung/Ghi chú", "Danh mục", "Số tiền", "Thanh toán", "Người tham gia", "Bill"]];
     expenses.forEach(e => rows.push(["Chi tiêu", e.date, e.payer, e.content, e.category || "Khác", e.amount, e.paymentMethod || "", (e.participants || []).join(" | "), e.billLink || ""]));
@@ -674,7 +720,6 @@
     a.click();
   };
 
-  // Đồng bộ Dữ liệu Realtime từ Firebase Firestore về thiết bị
   onSnapshot(query(expensesRef, orderBy("date", "desc")), snap => {
     expenses = snap.docs.map(d => ({ id: d.id, ...d.data() }));
     render();
@@ -686,8 +731,6 @@
   }, err => alert("Không đọc được dữ liệu Quỹ: " + err.message));
 
   window.addEventListener("resize", () => render());
-  
-  // Khởi chạy ứng dụng
   initUser();
 </script>
 </body>
