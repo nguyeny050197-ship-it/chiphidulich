@@ -4,42 +4,67 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Quản lý chi phí du lịch</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
 <style>
-:root{--bg:#f6f7fb;--card:#fff;--text:#141827;--muted:#667085;--line:#e8eaf2;--pri:#6c5ce7;--green:#00b894;--red:#ff4757;--shadow:0 16px 40px rgba(22,29,61,.08);--r:22px}
-[data-theme=dark]{--bg:#10131a;--card:#171b24;--text:#f4f7fb;--muted:#a4adbd;--line:#2a3040}
-*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:var(--bg);color:var(--text)}
-.wrap{max-width:1120px;margin:auto;padding:18px}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:16px}
-h1{font-size:26px;margin:0}.sub,.small{color:var(--muted);font-size:13px}.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#101828;--muted:#667085;--line:#e6e9f2;
+  --primary:#6c5ce7;--primary2:#8e7cff;--green:#00b894;--red:#ff4757;
+  --orange:#f59f00;--blue:#0984e3;--shadow:0 18px 45px rgba(16,24,40,.08);
+}
+[data-theme=dark]{
+  --bg:#0f121a;--card:#171b26;--text:#f8fafc;--muted:#a6adbb;--line:#2b3242;
+  --shadow:0 18px 45px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Be Vietnam Pro",Arial,sans-serif;background:var(--bg);color:var(--text)}
+.wrap{max-width:1120px;margin:auto;padding:18px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:16px}
+.logo{display:flex;gap:12px;align-items:center}
+.logoIcon{width:52px;height:52px;border-radius:18px;background:linear-gradient(135deg,#6c5ce7,#00b894);display:grid;place-items:center;font-size:28px;box-shadow:var(--shadow)}
+h1{font-size:25px;margin:0;font-weight:900}.sub{color:var(--muted);font-size:13px;margin-top:3px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:18px;margin-bottom:14px}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
-input,select,button{width:100%;padding:13px;border-radius:14px;border:1px solid var(--line);background:var(--card);color:var(--text);font-size:15px}
-button{border:0;background:var(--pri);color:white;font-weight:800;cursor:pointer}.secondary{background:#eef0ff;color:#4b43c6}.danger{background:var(--red)}.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
-.tabs{display:flex;gap:8px;overflow:auto;margin-bottom:14px}.tab{white-space:nowrap;background:var(--card);color:var(--text);border:1px solid var(--line)}.tab.active{background:var(--pri);color:white}
-.stat .label{color:var(--muted);font-size:13px}.stat .value{font-weight:900;font-size:22px;margin-top:8px}
-.members{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.check{border:1px solid var(--line);border-radius:14px;padding:10px;display:flex;gap:8px}.check input{width:auto}
-table{width:100%;border-collapse:collapse}th,td{padding:11px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;vertical-align:top}th{color:var(--muted)}
-.money{font-weight:800;white-space:nowrap}.plus{color:var(--green);font-weight:900}.minus{color:var(--red);font-weight:900}.hide{display:none}
-.pay{background:rgba(108,92,231,.09);border:1px solid var(--line);border-radius:16px;padding:12px;font-weight:800;margin-bottom:8px}
-.pill{display:inline-block;background:rgba(108,92,231,.1);color:var(--pri);padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}
+.stat{position:relative;overflow:hidden}.stat:after{content:"";position:absolute;right:-25px;top:-25px;width:90px;height:90px;border-radius:50%;background:rgba(108,92,231,.1)}
+.label{color:var(--muted);font-size:13px}.value{font-size:23px;font-weight:900;margin-top:8px}
+input,select,button{width:100%;padding:13px 14px;border-radius:16px;border:1px solid var(--line);background:var(--card);color:var(--text);font-family:inherit;font-size:14px}
+button{border:0;background:linear-gradient(135deg,var(--primary),var(--primary2));color:white;font-weight:800;cursor:pointer}
+.ghost{background:var(--card);color:var(--text);border:1px solid var(--line)}.danger{background:var(--red)}.soft{background:#eef0ff;color:#5046c7}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:14px}.tab{background:var(--card);color:var(--text);border:1px solid var(--line)}.tab.active{background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff}
+.members{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.check{border:1px solid var(--line);border-radius:16px;padding:11px;display:flex;gap:8px;align-items:center}.check input{width:auto}
+table{width:100%;border-collapse:collapse}th,td{padding:12px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;vertical-align:top}th{color:var(--muted);font-weight:800}
+.money{font-weight:900;white-space:nowrap}.plus{color:var(--green);font-weight:900}.minus{color:var(--red);font-weight:900}.hide{display:none}
+.pay{background:rgba(108,92,231,.09);border:1px solid var(--line);border-radius:18px;padding:13px;font-weight:800;margin-bottom:8px}
+.pill{display:inline-block;background:rgba(108,92,231,.1);color:var(--primary);padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800;margin:2px}
 .bill{display:inline-block;text-decoration:none;background:rgba(0,184,148,.12);color:var(--green);font-weight:900;border-radius:999px;padding:7px 10px;white-space:nowrap}
-@media(max-width:900px){.grid,.row,.row3{grid-template-columns:1fr 1fr}.members{grid-template-columns:1fr 1fr}table{display:block;overflow:auto}}
-@media(max-width:560px){.grid,.row,.row3{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}h1{font-size:23px}}
+.small{font-size:13px;color:var(--muted);line-height:1.5}.avatar{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:13px;color:white;font-weight:900;margin-right:8px}
+.y{background:#6c5ce7}.n{background:#00b894}.k{background:#0984e3}.b{background:#f59f00}
+@media(max-width:900px){.grid,.row,.row3{grid-template-columns:1fr 1fr}.tabs{grid-template-columns:1fr 1fr}.members{grid-template-columns:1fr 1fr}table{display:block;overflow:auto}}
+@media(max-width:560px){.grid,.row,.row3,.tabs{grid-template-columns:1fr}.top{align-items:flex-start;flex-direction:column}h1{font-size:22px}}
 </style>
 </head>
+
 <body>
 <div class="wrap">
   <div class="top">
-    <div>
-      <h1>🏝️ Quản lý chi phí du lịch</h1>
-      <div class="sub">Ý · Ngân · Khanh · Bảo · Quỹ chung</div>
+    <div class="logo">
+      <div class="logoIcon">🏝️</div>
+      <div>
+        <h1>Quản lý chi phí du lịch</h1>
+        <div class="sub">Ý · Ngân · Khanh · Bảo · Quỹ chung</div>
+      </div>
     </div>
     <div style="display:flex;gap:8px">
       <button class="ghost" id="themeBtn">🌙 Dark</button>
-      <button class="secondary" id="exportBtn">Xuất CSV</button>
+      <button class="soft" id="exportBtn">Xuất CSV</button>
     </div>
   </div>
 
   <div class="card" id="loginCard">
-    <h3>Chọn tên của bạn</h3>
+    <h3>👋 Chọn tên của bạn</h3>
     <div class="row" style="grid-template-columns:1fr 170px">
       <select id="currentUser">
         <option value="">-- Chọn tên --</option>
@@ -88,11 +113,9 @@ table{width:100%;border-collapse:collapse}th,td{padding:11px;border-bottom:1px s
           <input id="amount" type="number" min="0" placeholder="Số tiền">
         </div>
         <div class="row3" style="margin-top:10px">
-          <select id="paymentMethod">
-            <option>Tiền mặt</option><option>Chuyển khoản</option><option>Thẻ</option><option>Ví điện tử</option><option>Khác</option>
-          </select>
-          <input id="billLink" type="url" placeholder="Link bill Google Drive/Photos/Zalo...">
-          <input id="note" placeholder="Ghi chú nếu có">
+          <select id="paymentMethod"><option>Tiền mặt</option><option>Chuyển khoản</option><option>Thẻ</option><option>Ví điện tử</option><option>Khác</option></select>
+          <input id="billLink" type="url" placeholder="Link bill">
+          <input id="note" placeholder="Ghi chú">
         </div>
         <div class="small" style="margin-top:10px">Chọn người tham gia khoản chi:</div>
         <div class="members">
@@ -175,6 +198,11 @@ const esc = s => String(s || "").replace(/[&<>"']/g, m => ({ "&":"&amp;", "<":"&
 let expenses = [];
 let funds = [];
 let me = localStorage.getItem("travelUser") || "";
+
+function avatar(name){
+  const cls = name === "Ý" ? "y" : name === "Ngân" ? "n" : name === "Khanh" ? "k" : "b";
+  return `<span class="avatar ${cls}">${name[0]}</span>`;
+}
 
 function initUser(){
   if(me){
@@ -335,7 +363,7 @@ function render(){
 
   $("summaryBody").innerHTML = members.map(m => `
     <tr>
-      <td><b>${m}</b></td>
+      <td><b>${avatar(m)}${m}</b></td>
       <td class="money">${fmt(c.paidPersonal[m])}</td>
       <td class="money">${fmt(c.fundContrib[m])}</td>
       <td class="money">${fmt(c.owed[m])}</td>
@@ -345,13 +373,13 @@ function render(){
 
   const st = makeSettlements(c.balance);
   $("settlements").innerHTML = st.length
-    ? st.map(x => `<div class="pay">${x.from} ➜ ${x.to}: ${fmt(x.amount)}</div>`).join("")
+    ? st.map(x => `<div class="pay">${avatar(x.from)}${x.from} ➜ ${avatar(x.to)}${x.to}: ${fmt(x.amount)}</div>`).join("")
     : `<div class="small">Hiện chưa có khoản cần bù.</div>`;
 
   $("expenseBody").innerHTML = expenses.map(e => `
     <tr>
       <td>${e.date || ""}</td>
-      <td><b>${e.payer || ""}</b></td>
+      <td><b>${e.payer === "Quỹ chung" ? "💰 Quỹ chung" : avatar(e.payer) + e.payer}</b></td>
       <td>${esc(e.content)}${e.note ? `<div class="small">Ghi chú: ${esc(e.note)}</div>` : ""}</td>
       <td>${esc(e.paymentMethod || "")}</td>
       <td class="money">${fmt(e.amount)}</td>
@@ -364,7 +392,7 @@ function render(){
   $("fundBody").innerHTML = funds.map(f => `
     <tr>
       <td>${f.date || ""}</td>
-      <td><b>${f.person || ""}</b></td>
+      <td><b>${avatar(f.person)}${f.person}</b></td>
       <td class="money">${fmt(f.amount)}</td>
       <td>${esc(f.note)}</td>
       <td>${me === "Ý" ? `<button class="danger" data-fund-del="${f.id}">Xóa</button>` : `<span class="small">Chỉ Ý xóa</span>`}</td>
